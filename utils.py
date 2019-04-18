@@ -39,6 +39,20 @@ def get_equal_bins(probs: List[float], num_bins: int=10) -> Bins:
     return bins
 
 
+# def get_heuristic_bins(probs: List[float], num_bins: int=10) -> Bins:
+#     """Get bins that contain approximately an equal number of data points."""
+#     # Helper function that takes in an index, previous bin, number of bins left, and outputs next bin value
+#     # if bins left is 1, return 1.0
+#     # Try choosing (1.0 - prev_bin) / bins_left.
+#     # Choose the k log(n) / n percentile. If that's smaller, then perfect.
+#     # Otherwise, choose that point as the bin value.
+#     return bins
+
+
+def get_equal_prob_bins(num_bins: int=10) -> Bins:
+    return [i * 1.0 / num_bins for i in range(1, num_bins + 1)]
+
+
 def get_discrete_bins(data: List[float]) -> Bins:
     sorted_values = sorted(set(data))
     bins = []
@@ -90,7 +104,7 @@ def get_bin_probs(binned_data: BinnedData) -> List[float]:
 def plugin_ce(binned_data: BinnedData, power=2) -> float:
     def bin_error(data: Data):
         if len(data) == 0:
-            return 0.0
+            return 1.0
         return abs(difference_mean(data)) ** power
     bin_probs = get_bin_probs(binned_data)
     bin_errors = list(map(bin_error, binned_data))
@@ -101,6 +115,8 @@ def unbiased_square_ce(binned_data: BinnedData) -> float:
     # Note, this is not the l2 CE. It does not take the square root.
     # Useful for testing/debugging, e.g. to check if the estimator is unbiased.
     def bin_error(data: Data):
+        if len(data) < 2:
+            return 1.0
         perm_data: Data = np.random.permutation(data)
         [data1, data2] = split(perm_data, parts=2)
         assert len(data1) > 0 and len(data2) > 0
@@ -114,6 +130,8 @@ def improved_unbiased_square_ce(binned_data: BinnedData) -> float:
     # Note, this is not the l2 CE. It does not take the square root.
     # Useful for testing/debugging, e.g. to check if the estimator is unbiased.
     def bin_error(data: Data):
+        if len(data) < 2:
+            return 1.0
         biased_estimate = abs(difference_mean(data)) ** 2
         label_values = list(map(lambda x: x[1], data))
         mean_label = np.mean(label_values)
@@ -138,7 +156,7 @@ def resample(data: List[T]) -> List[T]:
     return [data[i] for i in indices]
 
 
-def bootstrap_uncertainty(data: List[T], functional, estimator=None, alpha=20.0, 
+def bootstrap_uncertainty(data: List[T], functional, estimator=None, alpha=10.0, 
                           num_samples=1000) -> Tuple[float, float]:
     """Return boostrap uncertained for 1 - alpha percent confidence interval."""
     if estimator is None:
@@ -149,6 +167,7 @@ def bootstrap_uncertainty(data: List[T], functional, estimator=None, alpha=20.0,
     for _ in range(num_samples):
         bootstrap_estimates.append(estimator(resample(data)))
     return (plugin + estimate - np.percentile(bootstrap_estimates, 100 - alpha / 2.0),
+            plugin + estimate - np.percentile(bootstrap_estimates, 50),
             plugin + estimate - np.percentile(bootstrap_estimates, alpha / 2.0))
 
 
@@ -181,7 +200,13 @@ def get_discrete_calibrator(model_probs, bins):
     for prob in model_probs:
         bin_idx = get_bin(prob, bins)
         binned_probs[bin_idx].append(prob)
-    bin_means = [np.mean(probs) for probs in binned_probs]
+    def safe_mean(probs, bin_idx):
+        if len(probs) == 0:
+            if bin_idx == 0:
+                return float(bins[0]) / 2.0
+            return float(bins[bin_idx] + bins[bin_idx - 1]) / 2.0
+        return np.mean(probs)
+    bin_means = [safe_mean(probs, bidx) for probs, bidx in zip(binned_probs, range(len(bins)))]
     def calibrator(probs):
         return [bin_means[get_bin(p, bins)] for p in probs]
     return calibrator

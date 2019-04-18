@@ -10,6 +10,8 @@ import utils
 
 dataset = cifar10
 
+# def get_ce_mses(logits, labels, ce_est)
+
 def calibrate_marginals_experiment(logits, labels, k):
     num_calib = 3000
     num_bin = 3000
@@ -32,18 +34,21 @@ def calibrate_marginals_experiment(logits, labels, k):
     biased_ces = []
     std_unbiased_ces = []
     std_biased_ces = []
-    for num_bins in range(10, 101, 10):
+    for num_bins in range(10, 21, 10):
         # Train a platt scaler and binner.
         platts = []
-        platt_binners = []
+        platt_binners_equal_points = []
         for l in range(k):
             platt_l = utils.get_platt_scaler(calib_logits[:, l], calib_labels[:, l])
             platts.append(platt_l)
             cal_logits_l = platt_l(calib_logits[:, l])
-            bins_l = utils.get_equal_bins(cal_logits_l, num_bins=num_bins)
+            # bins_l = utils.get_equal_bins(cal_logits_l, num_bins=num_bins)
+            # Get 
+            # bins_l = utils.get_equal_prob_bins(num_bins=num_bins)
+            bins_l = [0.0012, 0.05, 0.01, 0.95, 0.985, 1.0]
             cal_bin_logits_l = platt_l(bin_logits[:, l])
             platt_binner_l = utils.get_discrete_calibrator(cal_bin_logits_l, bins_l)
-            platt_binners.append(platt_binner_l)
+            platt_binners_equal_points.append(platt_binner_l)
 
         # Write a function that takes data and outputs the mse, ce
         def get_mse_ce(logits, labels, ce_est):
@@ -52,10 +57,17 @@ def calibrate_marginals_experiment(logits, labels, k):
             logits = np.array(logits)
             labels = np.array(labels)
             for l in range(k):
-                cal_logits_l = platt_binners[l](platts[l](logits[:, l]))
+                cal_logits_l = platt_binners_equal_points[l](platts[l](logits[:, l]))
                 data = list(zip(cal_logits_l, labels[:, l]))
                 bins_l = utils.get_discrete_bins(cal_logits_l)
                 binned_data = utils.bin(data, bins_l)
+                # probs = platts[l](logits[:, l])
+                # for p in [1, 5, 10, 20, 50, 85, 88.5, 92, 94, 96, 98, 100]:
+                #     print(np.percentile(probs, p))
+                # import time
+                # time.sleep(100)
+                # print('lengths')
+                # print([len(d) for d in binned_data])
                 ces.append(ce_est(binned_data))
                 mses.append(np.mean([(prob - label) ** 2 for prob, label in data]))
             return np.mean(mses), np.mean(ces)
@@ -120,9 +132,7 @@ if __name__ == "__main__":
     # save_cifar_validation_preds(cifar10, cifar10vgg.cifar10vgg(), "predictions.dat")
     logits = pickle.load(open("logits.dat", "rb"))
     (_, _), (_, y_test) = dataset.load_data()
-    print(y_test[:10])
     predictions = np.argmax(logits, 1)
-    print(predictions[:10])
     probabilities = np.max(logits, 1)
     accuracy = sum(y_test[:, 0] == predictions)
     print('accuracy is ' + str(accuracy))
