@@ -192,24 +192,32 @@ def get_platt_scaler(model_probs, labels):
         x = np.clip(prob, eps, 1 - eps)
         x = np.log(x / (1 - x))
         x = x * clf.coef_[0] + clf.intercept_
-        return 1 / (1 + np.exp(-x))
+        try:
+            output = 1 / (1 + np.exp(-x))
+        except Exception as e:
+            print(x)
+        return output
     return calibrator
 
-def get_discrete_calibrator(model_probs, bins):
-    binned_probs = [[] for _ in range(len(bins))]
-    for prob in model_probs:
+
+def get_histogram_calibrator(model_probs, values, bins):
+    binned_values = [[] for _ in range(len(bins))]
+    for prob, value in zip(model_probs, values):
         bin_idx = get_bin(prob, bins)
-        binned_probs[bin_idx].append(prob)
-    def safe_mean(probs, bin_idx):
-        if len(probs) == 0:
+        binned_values[bin_idx].append(float(value))
+    def safe_mean(values, bin_idx):
+        if len(values) == 0:
             if bin_idx == 0:
                 return float(bins[0]) / 2.0
             return float(bins[bin_idx] + bins[bin_idx - 1]) / 2.0
-        return np.mean(probs)
-    bin_means = [safe_mean(probs, bidx) for probs, bidx in zip(binned_probs, range(len(bins)))]
+        return np.mean(values)
+    bin_means = [safe_mean(values, bidx) for values, bidx in zip(binned_values, range(len(bins)))]
     def calibrator(probs):
         return [bin_means[get_bin(p, bins)] for p in probs]
     return calibrator
+
+def get_discrete_calibrator(model_probs, bins):
+    return get_histogram_calibrator(model_probs, model_probs, bins)
 
 
 # Utils to load and save files.
@@ -233,16 +241,9 @@ def get_accuracy(logits, labels):
     return sum(labels == predictions) * 1.0 / len(labels)
 
 def get_labels_one_hot(labels, k):
-    labels = labels[:, 0]
+    assert np.min(labels) == 0
+    assert np.max(labels) == k - 1
     num_labels = labels.shape[0]
     labels_one_hot = np.zeros((num_labels, k))
     labels_one_hot[np.arange(num_labels), labels] = 1
     return labels_one_hot
-
-def get_labels_one_hot(labels, k):
-    labels = labels[:, 0]
-    num_labels = labels.shape[0]
-    labels_one_hot = np.zeros((num_labels, k))
-    labels_one_hot[np.arange(num_labels), labels] = 1
-    return labels_one_hot
-

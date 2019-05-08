@@ -20,7 +20,7 @@ def calibrate_marginals_experiment(logits, labels, k):
     num_bins = 100
     bootstrap_samples = 100
     # First split by label? To ensure equal class numbers? Do this later.
-    labels = utils.get_labels_one_hot(labels, k)
+    labels = utils.get_labels_one_hot(labels[:, 0], k)
     mse = np.mean(np.square(labels - logits))
     print('original mse is ', mse)
     calib_logits = logits[:num_calib, :]
