@@ -235,7 +235,7 @@ def cifar10_experiment_marginal_2_2_3000():
 
 
 if __name__ == "__main__":
-    cifar10_experiment_marginal_2_2_3000()
+    cifar10_experiment_top_1_1_1000()
     # args = parser.parse_args()
     # logits, labels = utils.load_test_logits_labels(args.logits_file)
     # bins_list = list(range(5, 101, 5))
