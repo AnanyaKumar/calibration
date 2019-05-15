@@ -23,6 +23,9 @@ parser.add_argument('--plot_save_file', default='lower_bound_plot.png', type=str
 def lower_bound_experiment(logits, labels, calibration_data_size, bin_data_size, bins_list,
 					       save_name='cmp_est'):
 	# Calibrate using Platt/temperature scaling
+	indices = np.random.choice(list(range(len(logits))), size=len(logits), replace=False)
+	logits = [logits[i] for i in indices]
+	labels = [labels[i] for i in indices]
 	predictions = utils.get_top_predictions(logits)
 	probs = utils.get_top_probs(logits)
 	correct = (predictions == labels)
