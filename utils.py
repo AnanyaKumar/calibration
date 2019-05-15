@@ -183,7 +183,7 @@ def bootstrap_std(data: List[T], estimator=None, num_samples=100) -> Tuple[float
 
 def get_platt_scaler(model_probs, labels):
     clf = LogisticRegression(C=1e5, solver='lbfgs')
-    eps = 1e-15
+    eps = 1e-6
     model_probs = np.expand_dims(model_probs, axis=-1)
     model_probs = np.clip(model_probs, eps, 1 - eps)
     model_probs = np.log(model_probs / (1 - model_probs))
