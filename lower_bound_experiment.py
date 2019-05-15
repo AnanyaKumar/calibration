@@ -49,21 +49,23 @@ def lower_bound_experiment(logits, labels, calibration_data_size, bin_data_size,
 		print('interval: ', estimate_interval)
 	lower_errors = np.array(middle) - np.array(lower)
 	upper_errors = np.array(upper) - np.array(middle)
-	x_axis = np.log(bins_list)/np.log(2)
-	rc('font',**{'size': 12, 'family':'sans-serif','sans-serif':['Arial']})
-	rc('text', usetex=True)
+	# x_axis = np.log(bins_list)/np.log(2)
+	font = {'family' : 'normal', 'size': 18}
+	rc('font', **font)
 	plt.errorbar(
-		x_axis, middle, yerr=[lower_errors, upper_errors],
+		bins_list, middle, yerr=[lower_errors, upper_errors],
 		barsabove=True, fmt = 'none', color='black', capsize=4)
-	plt.scatter(x_axis, middle, color='black')
-	plt.xlabel(r"$\log_2(\mbox{no. of bins})$")
-	plt.ylabel(r"$\ell_1-\mbox{calibration error}$")
+	plt.scatter(bins_list, middle, color='black')
+	plt.xlabel(r"No. of bins")
+	plt.ylabel(r"Calibration error")
+	plt.xscale('log', basex=2)
 	ax = plt.gca()
 	ax.spines['right'].set_visible(False)
 	ax.spines['top'].set_visible(False)
 	ax.yaxis.set_ticks_position('left')
 	ax.xaxis.set_ticks_position('bottom')
-	ax.set_xlim([x_axis[0] - 0.99,x_axis[-1]+0.5])
+	# ax.set_xlim([x_axis[0] - 0.99,x_axis[-1]+0.5])
+	plt.tight_layout()
 	plt.savefig(args.plot_save_file)
 
 
