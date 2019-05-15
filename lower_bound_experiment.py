@@ -14,6 +14,8 @@ parser.add_argument('--calibration_data_size', default=1000, type=int,
                     help='Number of examples to use for Platt Scaling.')
 parser.add_argument('--bin_data_size', default=1000, type=int,
                     help='Number of examples to use for binning.')
+parser.add_argument('--plot_save_file', default='lower_bound_plot.png', type=str,
+                    help='File to save lower bound plot.')
 # parser.add_argument('--num_bins', default=10, type=int,
 # 					help='Bins to test estimators with.')
 
@@ -24,6 +26,7 @@ def lower_bound_experiment(logits, labels, calibration_data_size, bin_data_size,
 	predictions = utils.get_top_predictions(logits)
 	probs = utils.get_top_probs(logits)
 	correct = (predictions == labels)
+	print('num_correct: ', sum(correct))
 	# Platt scale on first chunk of data
 	platt = utils.get_platt_scaler(probs[:calibration_data_size], correct[:calibration_data_size])
 	platt_probs = platt(probs)
@@ -36,7 +39,7 @@ def lower_bound_experiment(logits, labels, calibration_data_size, bin_data_size,
 		verification_data = list(zip(verification_probs, verification_correct))
 		def estimator(data):
 			binned_data = utils.bin(data, bins)
-			return utils.plugin_ce(binned_data, power=1)
+			return utils.plugin_ce(binned_data, power=2)
 		print('estimate: ', estimator(verification_data))
 		estimate_interval = utils.bootstrap_uncertainty(
 			verification_data, estimator, num_samples=100)
@@ -61,7 +64,7 @@ def lower_bound_experiment(logits, labels, calibration_data_size, bin_data_size,
 	ax.yaxis.set_ticks_position('left')
 	ax.xaxis.set_ticks_position('bottom')
 	ax.set_xlim([x_axis[0] - 0.99,x_axis[-1]+0.5])
-	plt.show()
+	plt.savefig(args.plot_save_file)
 
 
 if __name__ == "__main__":

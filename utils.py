@@ -229,7 +229,9 @@ def save_test_logits_labels(dataset, model, filename):
 
 def load_test_logits_labels(filename):
     logits, labels = pickle.load(open(filename, "rb"))
-    return logits, labels[:, 0]
+    if len(labels.shape) > 1:
+        labels = labels[:, 0]
+    return logits, labels
 
 def get_top_predictions(logits):
     return np.argmax(logits, 1)
