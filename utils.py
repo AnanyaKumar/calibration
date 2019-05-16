@@ -54,7 +54,7 @@ def get_equal_prob_bins(num_bins: int=10) -> Bins:
 
 
 def get_discrete_bins(data: List[float]) -> Bins:
-    sorted_values = sorted(set(data))
+    sorted_values = sorted(np.unique(data))
     bins = []
     for i in range(len(sorted_values) - 1):
         mid = (sorted_values[i] + sorted_values[i+1]) / 2.0
@@ -71,11 +71,22 @@ def get_bin(pred_prob: float, bins: List[float]) -> int:
     return bisect.bisect_left(bins, pred_prob)
 
 
-def bin(data: Data, bins: Bins) -> BinnedData:
-    binned_data: BinnedData = [[] for _ in range(len(bins))]
-    for datum in data:
-        bin_idx = get_bin(datum[0], bins)
-        binned_data[bin_idx].append(datum)
+def bin(data: Data, bins: Bins):
+    return fast_bin(data, bins)
+    # binned_data: BinnedData = [[] for _ in range(len(bins))]
+    # for datum in data:
+    #     bin_idx = get_bin(datum[0], bins)
+    #     binned_data[bin_idx].append(datum)
+    # return binned_data
+
+
+def fast_bin(data, bins):
+    prob_label = np.array(data)
+    bin_indices = np.searchsorted(bins, prob_label[:, 0])
+    bin_sort_indices = np.argsort(bin_indices)
+    sorted_bins = bin_indices[bin_sort_indices]
+    splits = np.searchsorted(sorted_bins, list(range(1, len(bins))))
+    binned_data = np.split(prob_label[bin_sort_indices], splits)
     return binned_data
 
 
@@ -88,8 +99,9 @@ def equal_bin(data: Data, num_bins : int) -> BinnedData:
 
 def difference_mean(data : Data) -> float:
     """Returns average pred_prob - average label."""
-    ave_pred_prob = np.mean(list(map(lambda x: x[0], data)))
-    ave_label = np.mean(list(map(lambda x: x[1], data)))
+    data = np.array(data)
+    ave_pred_prob = np.mean(data[:, 0])
+    ave_label = np.mean(data[:, 1])
     return ave_pred_prob - ave_label
 
 
@@ -147,6 +159,20 @@ def unbiased_l2_ce(binned_data: BinnedData) -> float:
 
 def improved_unbiased_l2_ce(binned_data: BinnedData) -> float:
     return max(improved_unbiased_square_ce(binned_data), 0.0) ** 0.5
+
+
+# MSE Estimators.
+
+def eval_top_mse(probs, logits, labels):
+    correct = (get_top_predictions(logits) == labels)
+    return np.mean(np.square(probs - correct))
+
+
+def eval_marginal_mse(probs, logits, labels):
+    assert probs.shape == logits.shape
+    k = logits.shape[1]
+    labels_one_hot = get_labels_one_hot(np.array(labels), k)
+    return np.mean(np.square(probs - labels_one_hot)) * probs.shape[1] / 2.0
 
 
 # Bootstrap utilities.
@@ -211,8 +237,10 @@ def get_histogram_calibrator(model_probs, values, bins):
             return float(bins[bin_idx] + bins[bin_idx - 1]) / 2.0
         return np.mean(values)
     bin_means = [safe_mean(values, bidx) for values, bidx in zip(binned_values, range(len(bins)))]
+    bin_means = np.array(bin_means)
     def calibrator(probs):
-        return [bin_means[get_bin(p, bins)] for p in probs]
+        indices = np.searchsorted(bins, probs)
+        return bin_means[indices]
     return calibrator
 
 def get_discrete_calibrator(model_probs, bins):

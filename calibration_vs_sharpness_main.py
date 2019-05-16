@@ -4,6 +4,7 @@ import calibrators
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rc
+import time
 
 
 import utils
@@ -23,11 +24,6 @@ def eval_top_calibration(probs, logits, labels):
     bins = utils.get_discrete_bins(probs)
     binned_data = utils.bin(data, bins)
     return utils.plugin_ce(binned_data) ** 2
-
-
-def eval_top_mse(probs, logits, labels):
-    correct = (utils.get_top_predictions(logits) == labels)
-    return np.mean(np.square(probs - correct))
 
 
 def eval_marginal_calibration(probs, logits, labels, plugin=True):
@@ -70,11 +66,6 @@ def upper_bound_marginal_calibration_biased(probs, logits, labels, samples=30):
     return estimate + 1.3 * conf_interval
 
 
-def eval_marginal_mse(probs, logits, labels):
-    assert probs.shape == logits.shape
-    return np.mean(np.square(probs - logits)) * probs.shape[1] / 2.0
-
-
 def compare_calibrators(data_sampler, num_bins, Calibrators, calibration_evaluators,
                         eval_mse):
     """Get one sample of the calibration error and MSE for a set of calibrators.
@@ -99,21 +90,33 @@ def compare_calibrators(data_sampler, num_bins, Calibrators, calibration_evaluat
     calib_logits, calib_labels, eval_logits, eval_labels, mse_logits, mse_labels = data_sampler()
     l2_ces = []
     mses = []
+    train_time = 0.0
+    eval_time = 0.0
+    start_total = time.time()
     for Calibrator, i in zip(Calibrators, range(len(Calibrators))):
         calibrator = Calibrator(1, num_bins)
+        start_time = time.time()
         calibrator.train_calibration(calib_logits, calib_labels)
+        train_time += (time.time() - start_time)
         calibrated_probs = calibrator.calibrate(eval_logits)
+        start_time = time.time()
         mid = calibration_evaluators[i](calibrated_probs, eval_logits, eval_labels)
-        mse = eval_mse(calibrator.calibrate(mse_logits), mse_logits, mse_labels)
+        eval_time += time.time() - start_time
+        cal_mse_logits = calibrator.calibrate(mse_logits)
+        mse = eval_mse(cal_mse_logits, mse_logits, mse_labels)
         l2_ces.append(mid)
         mses.append(mse)
+    print('train_time: ', train_time)
+    print('eval_time: ', eval_time)
+    print('total_time: ', time.time() - start_total)
     return l2_ces, mses
 
 
 def average_calibration(data_sampler, num_bins, Calibrators, calibration_evaluators,
                         eval_mse, num_trials=100):
     l2_ces, mses = [], []
-    for _ in range(num_trials):
+    for i in range(num_trials):
+        print(i)
         cur_l2_ces, cur_mses = compare_calibrators(
             data_sampler, num_bins, Calibrators,
             calibration_evaluators, eval_mse)
@@ -156,8 +159,7 @@ def plot_ces(bins_list, l2_ces, l2_ce_stddevs):
     plt.ylabel("L2 Squared Calibration Error")
     plt.xlabel("Number of Bins")
     plt.legend(loc='lower right')
-
-    plt.show()
+    plt.savefig('marginal_ces.png')
 
 
 def plot_mse_ce_curve(bins_list, l2_ces, mses, xlim=None, ylim=None):
@@ -187,7 +189,7 @@ def plot_mse_ce_curve(bins_list, l2_ces, mses, xlim=None, ylim=None):
         plt.ylim(ylim)
     plt.xlabel("L2 Squared Calibration Error")
     plt.ylabel("Mean-Squared Error")
-    plt.show()
+    plt.savefig('marginal_mse_vs_ces.png')
 
 
 def make_calibration_data_sampler(logits, labels, num_calibration):
@@ -229,7 +231,7 @@ def cifar10_experiment_top_1_1_1000():
         num_bins_list=bins_list,
         Calibrators=[calibrators.HistogramTopCalibrator, calibrators.PlattBinnerTopCalibrator],
         calibration_evaluators=[eval_top_calibration, eval_top_calibration],
-        eval_mse=eval_top_mse,
+        eval_mse=utils.eval_top_mse,
         num_trials=num_trials)
     plot_mse_ce_curve(bins_list, l2_ces, mses, xlim=(0.0, 0.002), ylim=(0.0425, 0.045))
     plot_ces(bins_list, l2_ces, l2_stddevs)
@@ -246,7 +248,7 @@ def cifar10_experiment_top_1_2_3000():
         num_bins_list=bins_list,
         Calibrators=[calibrators.HistogramTopCalibrator, calibrators.PlattBinnerTopCalibrator],
         calibration_evaluators=[eval_top_calibration, eval_top_calibration],
-        eval_mse=eval_top_mse,
+        eval_mse=utils.eval_top_mse,
         num_trials=num_trials)
     plot_mse_ce_curve(bins_list, l2_ces, mses, xlim=(0.0, 0.002), ylim=(0.0425, 0.045))
     plot_ces(bins_list, l2_ces, l2_stddevs)
@@ -264,9 +266,9 @@ def cifar10_experiment_marginal_2_1_1000():
         Calibrators=[calibrators.HistogramMarginalCalibrator,
                      calibrators.PlattBinnerMarginalCalibrator],
         calibration_evaluators=[eval_marginal_calibration, eval_marginal_calibration],
-        eval_mse=eval_marginal_mse,
+        eval_mse=utils.eval_marginal_mse,
         num_trials=num_trials)
-    plot_mse_ce_curve(bins_list, l2_ces, mses, xlim=(0.0, 0.001), ylim=(0.0, 0.04))
+    plot_mse_ce_curve(bins_list, l2_ces, mses, xlim=(0.0, 0.001), ylim=(0.0, 0.07))
     plot_ces(bins_list, l2_ces, l2_stddevs)
 
 
@@ -282,7 +284,7 @@ def cifar10_experiment_marginal_2_2_3000():
         Calibrators=[calibrators.HistogramMarginalCalibrator,
                      calibrators.PlattBinnerMarginalCalibrator],
         calibration_evaluators=[eval_marginal_calibration, eval_marginal_calibration],
-        eval_mse=eval_marginal_mse,
+        eval_mse=utils.eval_marginal_mse,
         num_trials=num_trials)
     plot_mse_ce_curve(bins_list, l2_ces, mses, xlim=(0.0, 0.001), ylim=(0.0, 0.04))
     plot_ces(bins_list, l2_ces, l2_stddevs)
@@ -302,19 +304,54 @@ def cifar10_experiment_marginal_3_1_1000():
                      calibrators.PlattBinnerMarginalCalibrator],
         calibration_evaluators=[upper_bound_marginal_calibration_biased,
                                 upper_bound_marginal_calibration_unbiased],
-        eval_mse=eval_marginal_mse,
+        eval_mse=utils.eval_marginal_mse,
         num_trials=num_trials)
     plot_mse_ce_curve(bins_list, l2_ces, mses, xlim=(0.0, 0.002), ylim=(0.0, 0.04))
     plot_ces(bins_list, l2_ces, l2_stddevs)
 
 
+def imagenet_experiment_top_1_1_1000():
+    logits_file = 'imagenet_logits.dat'
+    logits, labels = utils.load_test_logits_labels(logits_file)
+    bins_list = list(range(10, 101, 10))
+    num_trials = 100
+    num_calibration = 1000
+    l2_ces, l2_stddevs, mses = vary_bin_calibration(
+        data_sampler=make_calibration_data_sampler(logits, labels, num_calibration),
+        num_bins_list=bins_list,
+        Calibrators=[calibrators.HistogramTopCalibrator, calibrators.PlattBinnerTopCalibrator],
+        calibration_evaluators=[eval_top_calibration, eval_top_calibration],
+        eval_mse=utils.eval_top_mse,
+        num_trials=num_trials)
+    plot_mse_ce_curve(bins_list, l2_ces, mses)
+    plot_ces(bins_list, l2_ces, l2_stddevs)
+
+
+def imagenet_experiment_marginal_2_1_1000():
+    logits_file = 'imagenet_logits.dat'
+    logits, labels = utils.load_test_logits_labels(logits_file)
+    bins_list = list(range(10, 101, 10))
+    num_trials = 20
+    num_calibration = 1000
+    l2_ces, l2_stddevs, mses = vary_bin_calibration(
+        data_sampler=make_calibration_data_sampler(logits, labels, num_calibration),
+        num_bins_list=bins_list,
+        Calibrators=[calibrators.HistogramMarginalCalibrator,
+                     calibrators.PlattBinnerMarginalCalibrator],
+        calibration_evaluators=[eval_marginal_calibration, eval_marginal_calibration],
+        eval_mse=utils.eval_marginal_mse,
+        num_trials=num_trials)
+    plot_mse_ce_curve(bins_list, l2_ces, mses)
+    plot_ces(bins_list, l2_ces, l2_stddevs)
+
+
 if __name__ == "__main__":
-    cifar10_experiment_marginal_3_1_1000()
+    cifar10_experiment_marginal_2_1_1000()
     # args = parser.parse_args()
     # logits, labels = utils.load_test_logits_labels(args.logits_file)
     # bins_list = list(range(5, 101, 5))
     # l2_ces, l2_stddevs, mses = vary_bin_calibration(logits, labels, args.num_bin_selection,
-    #     args.num_binning, bins_list, eval_top_calibration, eval_top_mse,
+    #     args.num_binning, bins_list, eval_top_calibration, utils.eval_top_mse,
     #     [HistogramTopCalibrator, PlattBinnerTopCalibrator])
     # plot_mse_ce_curve(bins_list, l2_ces, mses)
     # plot_ces(bins_list, l2_ces, l2_stddevs)
