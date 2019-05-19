@@ -332,7 +332,7 @@ def imagenet_experiment_marginal_2_1_1000():
     logits, labels = utils.load_test_logits_labels(logits_file)
     bins_list = list(range(10, 101, 10))
     num_trials = 20
-    num_calibration = 1000
+    num_calibration = 25000
     l2_ces, l2_stddevs, mses = vary_bin_calibration(
         data_sampler=make_calibration_data_sampler(logits, labels, num_calibration),
         num_bins_list=bins_list,
@@ -346,7 +346,7 @@ def imagenet_experiment_marginal_2_1_1000():
 
 
 if __name__ == "__main__":
-    cifar10_experiment_marginal_2_1_1000()
+    imagenet_experiment_marginal_2_1_1000()
     # args = parser.parse_args()
     # logits, labels = utils.load_test_logits_labels(args.logits_file)
     # bins_list = list(range(5, 101, 5))

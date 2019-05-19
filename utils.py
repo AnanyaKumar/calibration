@@ -49,7 +49,7 @@ def get_equal_bins(probs: List[float], num_bins: int=10) -> Bins:
 #     return bins
 
 
-def get_equal_prob_bins(num_bins: int=10) -> Bins:
+def get_equal_prob_bins(probs: List[float], num_bins: int=10) -> Bins:
     return [i * 1.0 / num_bins for i in range(1, num_bins + 1)]
 
 
@@ -258,6 +258,9 @@ def load_test_logits_labels(filename):
     logits, labels = pickle.load(open(filename, "rb"))
     if len(labels.shape) > 1:
         labels = labels[:, 0]
+    indices = np.random.choice(list(range(len(logits))), size=len(logits), replace=False)
+    logits = np.array([logits[i] for i in indices])
+    labels = np.array([labels[i] for i in indices])
     return logits, labels
 
 def get_top_predictions(logits):
