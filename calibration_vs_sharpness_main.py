@@ -96,9 +96,9 @@ def compare_calibrators(data_sampler, num_bins, Calibrators, calibration_evaluat
         mse = eval_mse(cal_mse_logits, mse_logits, mse_labels)
         l2_ces.append(mid)
         mses.append(mse)
-    # print('train_time: ', train_time)
-    # print('eval_time: ', eval_time)
-    # print('total_time: ', time.time() - start_total)
+    print('train_time: ', train_time)
+    print('eval_time: ', eval_time)
+    print('total_time: ', time.time() - start_total)
     return l2_ces, mses
 
 
