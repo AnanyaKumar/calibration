@@ -92,14 +92,14 @@ def imagenet_experiment(savefile, binning_func=utils.get_equal_bins, lp=2):
 
 
 if __name__ == "__main__":
-	# cifar_experiment('l2_lower_bound_cifar_plot.png')
+	cifar_experiment('l2_lower_bound_cifar_plot.png')
 	cifar_experiment('l1_lower_bound_cifar_plot.png', lp=1)
 	cifar_experiment('l1_lower_bound_cifar_plot_prob_bin.png',
 				     binning_func=utils.get_equal_prob_bins, lp=1)
-	# imagenet_experiment('l2_lower_bound_imagenet_plot.png')
-	# imagenet_experiment('l1_lower_bound_imagenet_plot.png', lp=1)
-	# imagenet_experiment('l1_lower_bound_imagenet_plot_prob_bin.png',
-	# 					binning_func=utils.get_equal_prob_bins, lp=1)
+	imagenet_experiment('l2_lower_bound_imagenet_plot.png')
+	imagenet_experiment('l1_lower_bound_imagenet_plot.png', lp=1)
+	imagenet_experiment('l1_lower_bound_imagenet_plot_prob_bin.png',
+						binning_func=utils.get_equal_prob_bins, lp=1)
 	# args = parser.parse_args()
 	# np.random.seed(0)
 	# logits, labels = utils.load_test_logits_labels(args.logits_file)

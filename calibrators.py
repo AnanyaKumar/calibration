@@ -3,6 +3,7 @@ import numpy as np
 
 import utils
 
+
 class HistogramTopCalibrator:
 
     def __init__(self, num_calibration, num_bins):

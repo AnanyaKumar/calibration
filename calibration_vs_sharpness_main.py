@@ -1,21 +1,11 @@
 
-import argparse
 import calibrators
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rc
 import time
 
-
 import utils
-
-parser = argparse.ArgumentParser()
-parser.add_argument('--logits_file', default='cifar_logits.dat', type=str,
-                    help='Name of file to load logits, labels pair.')
-parser.add_argument('--num_bin_selection', default=500, type=int,
-                    help='Number of examples to use for Platt Scaling.')
-parser.add_argument('--num_binning', default=500, type=int,
-                    help='Number of examples to use for binning.')
 
 
 def eval_top_calibration(probs, logits, labels):
@@ -106,9 +96,9 @@ def compare_calibrators(data_sampler, num_bins, Calibrators, calibration_evaluat
         mse = eval_mse(cal_mse_logits, mse_logits, mse_labels)
         l2_ces.append(mid)
         mses.append(mse)
-    print('train_time: ', train_time)
-    print('eval_time: ', eval_time)
-    print('total_time: ', time.time() - start_total)
+    # print('train_time: ', train_time)
+    # print('eval_time: ', eval_time)
+    # print('total_time: ', time.time() - start_total)
     return l2_ces, mses
 
 
@@ -116,7 +106,6 @@ def average_calibration(data_sampler, num_bins, Calibrators, calibration_evaluat
                         eval_mse, num_trials=100):
     l2_ces, mses = [], []
     for i in range(num_trials):
-        print(i)
         cur_l2_ces, cur_mses = compare_calibrators(
             data_sampler, num_bins, Calibrators,
             calibration_evaluators, eval_mse)
@@ -145,8 +134,9 @@ def vary_bin_calibration(data_sampler, num_bins_list, Calibrators, calibration_e
 
 
 def plot_ces(bins_list, l2_ces, l2_ce_stddevs):
+    plt.clf()
     font = {'family' : 'normal',
-        'size'   : 20}
+        'size'   : 16}
     rc('font', **font)
     # 90% confidence intervals.
     error_bars_90 = 1.645 * l2_ce_stddevs
@@ -159,12 +149,14 @@ def plot_ces(bins_list, l2_ces, l2_ce_stddevs):
     plt.ylabel("L2 Squared Calibration Error")
     plt.xlabel("Number of Bins")
     plt.legend(loc='lower right')
+    plt.tight_layout()
     plt.savefig('marginal_ces.png')
 
 
 def plot_mse_ce_curve(bins_list, l2_ces, mses, xlim=None, ylim=None):
+    plt.clf()
     font = {'family' : 'normal',
-        'size'   : 20}
+        'size'   : 14}
     rc('font', **font)
     def get_pareto_points(data):
         pareto_points = []
@@ -182,13 +174,14 @@ def plot_mse_ce_curve(bins_list, l2_ces, mses, xlim=None, ylim=None):
     plt.title("MSE vs Calibration Error")
     plt.scatter(l2ces0, mses0, c='red', marker='o', label='hist')
     plt.scatter(l2ces1, mses1, c='blue', marker='s', label='ours')
-    plt.legend(loc='upper left')
+    plt.legend(loc='upper right')
     if xlim is not None:
         plt.xlim(xlim)
     if ylim is not None:
         plt.ylim(ylim)
     plt.xlabel("L2 Squared Calibration Error")
     plt.ylabel("Mean-Squared Error")
+    plt.tight_layout()
     plt.savefig('marginal_mse_vs_ces.png')
 
 
@@ -224,7 +217,7 @@ def cifar10_experiment_top_1_1_1000():
     logits_file = 'cifar_logits.dat'
     logits, labels = utils.load_test_logits_labels(logits_file)
     bins_list = list(range(10, 101, 10))
-    num_trials = 100
+    num_trials = 1000
     num_calibration = 1000
     l2_ces, l2_stddevs, mses = vary_bin_calibration(
         data_sampler=make_calibration_data_sampler(logits, labels, num_calibration),
@@ -241,7 +234,7 @@ def cifar10_experiment_top_1_2_3000():
     logits_file = 'cifar_logits.dat'
     logits, labels = utils.load_test_logits_labels(logits_file)
     bins_list = list(range(10, 101, 10))
-    num_trials = 100
+    num_trials = 1000
     num_calibration = 3000
     l2_ces, l2_stddevs, mses = vary_bin_calibration(
         data_sampler=make_calibration_data_sampler(logits, labels, num_calibration),
@@ -258,7 +251,7 @@ def cifar10_experiment_marginal_2_1_1000():
     logits_file = 'cifar_logits.dat'
     logits, labels = utils.load_test_logits_labels(logits_file)
     bins_list = list(range(10, 101, 10))
-    num_trials = 20
+    num_trials = 100
     num_calibration = 1000
     l2_ces, l2_stddevs, mses = vary_bin_calibration(
         data_sampler=make_calibration_data_sampler(logits, labels, num_calibration),
@@ -268,7 +261,7 @@ def cifar10_experiment_marginal_2_1_1000():
         calibration_evaluators=[eval_marginal_calibration, eval_marginal_calibration],
         eval_mse=utils.eval_marginal_mse,
         num_trials=num_trials)
-    plot_mse_ce_curve(bins_list, l2_ces, mses, xlim=(0.0, 0.001), ylim=(0.0, 0.07))
+    plot_mse_ce_curve(bins_list, l2_ces, mses, xlim=(0.0, 0.0006), ylim=(0.04, 0.08))
     plot_ces(bins_list, l2_ces, l2_stddevs)
 
 
@@ -276,7 +269,7 @@ def cifar10_experiment_marginal_2_2_3000():
     logits_file = 'cifar_logits.dat'
     logits, labels = utils.load_test_logits_labels(logits_file)
     bins_list = list(range(10, 101, 10))
-    num_trials = 20
+    num_trials = 100
     num_calibration = 3000
     l2_ces, l2_stddevs, mses = vary_bin_calibration(
         data_sampler=make_calibration_data_sampler(logits, labels, num_calibration),
@@ -346,13 +339,11 @@ def imagenet_experiment_marginal_2_1_1000():
 
 
 if __name__ == "__main__":
+    # Main marginal calibration CIFAR-10 experiment in the paper.
+    # cifar10_experiment_marginal_2_1_1000()
+    # Top-label calibration CIFAR experiment in the Appendix, 1000 points.
     imagenet_experiment_marginal_2_1_1000()
-    # args = parser.parse_args()
-    # logits, labels = utils.load_test_logits_labels(args.logits_file)
-    # bins_list = list(range(5, 101, 5))
-    # l2_ces, l2_stddevs, mses = vary_bin_calibration(logits, labels, args.num_bin_selection,
-    #     args.num_binning, bins_list, eval_top_calibration, utils.eval_top_mse,
-    #     [HistogramTopCalibrator, PlattBinnerTopCalibrator])
-    # plot_mse_ce_curve(bins_list, l2_ces, mses)
-    # plot_ces(bins_list, l2_ces, l2_stddevs)
-
+    # Top-label calibration CIFAR experiment in the Appendix, 3000 points.
+    # cifar10_experiment_top_1_1_3000()
+    # Top-label calibration ImageNet experiment in the Appendix, 1000 points.
+    # imagenet_experiment_top_1_1_1000()

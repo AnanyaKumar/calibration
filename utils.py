@@ -12,7 +12,6 @@ Bins = List[float]  # List of bin boundaries, excluding 0.0, but including 1.0.
 BinnedData = List[Data]  # binned_data[i] contains the data in bin i.
 T = TypeVar('T')
 
-
 eps = 1e-6
 
 
@@ -39,16 +38,6 @@ def get_equal_bins(probs: List[float], num_bins: int=10) -> Bins:
     return bins
 
 
-# def get_heuristic_bins(probs: List[float], num_bins: int=10) -> Bins:
-#     """Get bins that contain approximately an equal number of data points."""
-#     # Helper function that takes in an index, previous bin, number of bins left, and outputs next bin value
-#     # if bins left is 1, return 1.0
-#     # Try choosing (1.0 - prev_bin) / bins_left.
-#     # Choose the k log(n) / n percentile. If that's smaller, then perfect.
-#     # Otherwise, choose that point as the bin value.
-#     return bins
-
-
 def get_equal_prob_bins(probs: List[float], num_bins: int=10) -> Bins:
     return [i * 1.0 / num_bins for i in range(1, num_bins + 1)]
 
@@ -73,6 +62,7 @@ def get_bin(pred_prob: float, bins: List[float]) -> int:
 
 def bin(data: Data, bins: Bins):
     return fast_bin(data, bins)
+    # Older, slower, version. This was a computational bottleneck.
     # binned_data: BinnedData = [[] for _ in range(len(bins))]
     # for datum in data:
     #     bin_idx = get_bin(datum[0], bins)
@@ -124,8 +114,7 @@ def plugin_ce(binned_data: BinnedData, power=2) -> float:
     
 
 def unbiased_square_ce(binned_data: BinnedData) -> float:
-    # Note, this is not the l2 CE. It does not take the square root.
-    # Useful for testing/debugging, e.g. to check if the estimator is unbiased.
+    # Note, this is not the l2 CE, but l2 square CE. It does not take the square root.
     def bin_error(data: Data):
         if len(data) < 2:
             return 1.0
@@ -140,7 +129,6 @@ def unbiased_square_ce(binned_data: BinnedData) -> float:
 
 def improved_unbiased_square_ce(binned_data: BinnedData) -> float:
     # Note, this is not the l2 CE. It does not take the square root.
-    # Useful for testing/debugging, e.g. to check if the estimator is unbiased.
     def bin_error(data: Data):
         if len(data) < 2:
             return 1.0
@@ -243,6 +231,7 @@ def get_histogram_calibrator(model_probs, values, bins):
         return bin_means[indices]
     return calibrator
 
+
 def get_discrete_calibrator(model_probs, bins):
     return get_histogram_calibrator(model_probs, model_probs, bins)
 
@@ -254,6 +243,7 @@ def save_test_logits_labels(dataset, model, filename):
     logits = model.predict(x_test) 
     pickle.dump((logits, y_test), open(filename, "wb"))
 
+
 def load_test_logits_labels(filename):
     logits, labels = pickle.load(open(filename, "rb"))
     if len(labels.shape) > 1:
@@ -263,14 +253,18 @@ def load_test_logits_labels(filename):
     labels = np.array([labels[i] for i in indices])
     return logits, labels
 
+
 def get_top_predictions(logits):
     return np.argmax(logits, 1)
+
 
 def get_top_probs(logits):
     return np.max(logits, 1)
 
+
 def get_accuracy(logits, labels):
     return sum(labels == predictions) * 1.0 / len(labels)
+
 
 def get_labels_one_hot(labels, k):
     assert np.min(labels) == 0
