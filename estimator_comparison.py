@@ -16,19 +16,13 @@ parser.add_argument('--platt_data_size', default=1000, type=int,
                     help='Number of examples to use for Platt Scaling.')
 parser.add_argument('--bin_data_size', default=2000, type=int,
                     help='Number of examples to use for binning.')
-parser.add_argument('--num_bins', default=10, type=int,
+parser.add_argument('--num_bins', default=100, type=int,
 					help='Bins to test estimators with.')
 
 
 def compare_estimators(logits, labels, platt_data_size, bin_data_size, num_bins,
-					   ver_base_size=2000, ver_size_increment=1000, num_resamples = 1000,
+					   ver_base_size=2000, ver_size_increment=1000, num_resamples = 100,
 					   save_name='cmp_est'):
-	# # Optionally reshuffle data.
-	# assert len(logits) == len(labels)
-	# indices = np.array(list(range(len(logits))))
-	# np.random.shuffle(indices)
-	# logits = [logits[i] for i in indices]
-	# labels = [labels[i] for i in indices]
 	# Convert logits to prediction, probs.
 	predictions = utils.get_top_predictions(logits)
 	probs = utils.get_top_probs(logits)
@@ -91,44 +85,29 @@ def compare_estimators(logits, labels, platt_data_size, bin_data_size, num_bins,
 	true_calibration = utils.plugin_ce(utils.bin(verification_data, bins)) ** 2
 	print(true_calibration)
 	print(np.sqrt(np.mean(estimates[1, -1, :])))
-	# print(estimates[:, :, 99])
-	# estimates = np.sqrt(np.maximum(estimates, 0.0))
 	errors = np.abs(estimates - true_calibration)
 	accumulated_errors = np.mean(errors, axis=-1)
 	error_bars_90 = 1.645 * np.std(errors, axis=-1) / np.sqrt(num_resamples)
 	print(accumulated_errors)
-	# plt.errorbar(
-	# 	verification_sizes, accumulated_errors[0], yerr=[error_bars_90[0], error_bars_90[0]],
-	# 	barsabove=True, color='red', capsize=4, label='plugin')
-	# plt.errorbar(
-	# 	verification_sizes, accumulated_errors[1], yerr=[error_bars_90[1], error_bars_90[1]],
-	# 	barsabove=True, color='blue', capsize=4, label='ours')
-	# plt.ylabel("Mean-Squared-Error")
-	# plt.xlabel("Number of Samples")
-	# # plt.plot(verification_sizes, accumulated_errors[0], label='plugin')
-	# # plt.plot(verification_sizes, accumulated_errors[1], label='ours')
-	# plt.legend(loc='upper right')
-	# plt.show()
+	plt.errorbar(
+		verification_sizes, accumulated_errors[0], yerr=[error_bars_90[0], error_bars_90[0]],
+		barsabove=True, color='red', capsize=4, label='plugin')
+	plt.errorbar(
+		verification_sizes, accumulated_errors[1], yerr=[error_bars_90[1], error_bars_90[1]],
+		barsabove=True, color='blue', capsize=4, label='debiased')
+	plt.ylabel("Mean-Squared-Error")
+	plt.xlabel("Number of Samples")
+	plt.legend(loc='upper right')
+	plt.show()
 
 	plt.ylabel("Number of estimates")
 	plt.xlabel("Absolute deviation from ground truth")
 	bins = np.linspace(np.min(errors[:, 0, :]), np.max(errors[:, 0, :]), 40)
 	plt.hist(errors[0][0], bins, alpha=0.5, label='plugin')
-	plt.hist(errors[1][0], bins, alpha=0.5, label='ours')
+	plt.hist(errors[1][0], bins, alpha=0.5, label='debiased')
 	plt.legend(loc='upper right')
 	plt.gca().yaxis.set_major_formatter(PercentFormatter(xmax=num_resamples))
 	plt.show()
-
-	# print(median_estimates)
-	# plt.title("Estimated Calibration Error vs No. of Samples (%d bins)" % num_bins)
-	# plt.plot(verification_sizes, median_estimates[0], label='plugin')
-	# plt.fill_between(verification_sizes, lower_estimates[0], upper_estimates[0], alpha=0.3)
-	# plt.plot(verification_sizes, median_estimates[1], label='ours')
-	# plt.fill_between(verification_sizes, lower_estimates[1], upper_estimates[1], alpha=0.3)
-	# plt.legend(loc='upper right')
-	# plt.xlabel("No. of Samples")
-	# plt.ylabel("Estimated Calibration Error")
-	# plt.show()
 
 
 if __name__ == "__main__":

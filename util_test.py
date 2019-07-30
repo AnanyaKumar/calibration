@@ -22,10 +22,6 @@ class TestUtilMethods(unittest.TestCase):
         bins = get_equal_bins(probs, num_bins=2)
         self.assertEqual(bins, [0.4, 1.0])
 
-    def test_get_discrete_bins(self):
-        probs = [0.3, 0.5, 0.2, 0.3, 0.5]
-        self.assertEqual(get_discrete_bins(probs), [0.2, 0.3, 0.5, 1.0])
-
     def test_get_bin(self):
         bins = [0.2, 0.5, 1.0]
         self.assertEqual(get_bin(0.0, bins), 0)
@@ -38,9 +34,10 @@ class TestUtilMethods(unittest.TestCase):
     def test_bin(self):
         data = [(0.3, 1.0), (0.5, 0.0), (0.2, 1.0), (0.3, 0.0), (0.5, 1.0), (0.7, 0.0)]
         bins = [0.4, 1.0]
-        binned_data = bin(data, bins)
-        self.assertTrue(multiset_equal(binned_data[0], [(0.3, 1.0), (0.2, 1.0), (0.3, 0.0)]))
-        self.assertTrue(multiset_equal(binned_data[1], [(0.5, 1.0), (0.5, 0.0), (0.7, 0.0)]))
+        binned_data = tuple(np.array(bin(data, bins)).tolist())
+        print(binned_data)
+        self.assertTrue(multiset_equal(list(binned_data[0]), ((0.3, 1.0), (0.2, 1.0), (0.3, 0.0))))
+        self.assertTrue(multiset_equal(list(binned_data[1]), ((0.5, 1.0), (0.5, 0.0), (0.7, 0.0))))
 
     @parameterized.expand([
         [[(0.3, 0.5)], -0.2],

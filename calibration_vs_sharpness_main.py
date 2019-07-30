@@ -138,11 +138,12 @@ def plot_ces(bins_list, l2_ces, l2_ce_stddevs):
     font = {'family' : 'normal',
         'size'   : 16}
     rc('font', **font)
+    plt.ticklabel_format(style='sci', axis='y', scilimits=(0,0))
     # 90% confidence intervals.
     error_bars_90 = 1.645 * l2_ce_stddevs
     plt.errorbar(
       bins_list, l2_ces[0], yerr=[error_bars_90[0], error_bars_90[0]],
-      barsabove=True, color='red', capsize=4, label='histogram')
+      barsabove=True, color='red', capsize=4, label='histogram', linestyle='--')
     plt.errorbar(
       bins_list, l2_ces[1], yerr=[error_bars_90[1], error_bars_90[1]],
       barsabove=True, color='blue', capsize=4, label='variance-reduced')
@@ -156,8 +157,9 @@ def plot_ces(bins_list, l2_ces, l2_ce_stddevs):
 def plot_mse_ce_curve(bins_list, l2_ces, mses, xlim=None, ylim=None):
     plt.clf()
     font = {'family' : 'normal',
-        'size'   : 14}
+        'size'   : 16}
     rc('font', **font)
+    plt.ticklabel_format(style='sci', axis='x', scilimits=(0,0))
     def get_pareto_points(data):
         pareto_points = []
         def dominated(p1, p2):
@@ -172,8 +174,8 @@ def plot_mse_ce_curve(bins_list, l2_ces, mses, xlim=None, ylim=None):
     l2ces0, mses0 = zip(*get_pareto_points(list(zip(l2_ces[0], mses[0]))))
     l2ces1, mses1 = zip(*get_pareto_points(list(zip(l2_ces[1], mses[1]))))
     plt.title("MSE vs Calibration Error")
-    plt.scatter(l2ces0, mses0, c='red', marker='o', label='hist')
-    plt.scatter(l2ces1, mses1, c='blue', marker='s', label='ours')
+    plt.scatter(l2ces0, mses0, c='red', marker='o', label='histogram')
+    plt.scatter(l2ces1, mses1, c='blue', marker='x', label='variance-reduced')
     plt.legend(loc='upper right')
     if xlim is not None:
         plt.xlim(xlim)
@@ -342,7 +344,7 @@ if __name__ == "__main__":
     # Main marginal calibration CIFAR-10 experiment in the paper.
     # cifar10_experiment_marginal_2_1_1000()
     # Top-label calibration CIFAR experiment in the Appendix, 1000 points.
-    imagenet_experiment_marginal_2_1_1000()
+    cifar10_experiment_marginal_2_1_1000()
     # Top-label calibration CIFAR experiment in the Appendix, 3000 points.
     # cifar10_experiment_top_1_1_3000()
     # Top-label calibration ImageNet experiment in the Appendix, 1000 points.

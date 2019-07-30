@@ -4,6 +4,47 @@ import numpy as np
 import utils
 
 
+class HistogramCalibrator:
+    def __init__(self, num_calibration, num_bins):
+        self._num_calibration = num_calibration
+        self._num_bins = num_bins
+
+    def train_calibration(self, zs, ys):
+        bins = utils.get_equal_bins(zs, num_bins=self._num_bins)
+        self._calibrator = utils.get_histogram_calibrator(zs, ys, bins)
+
+    def calibrate(self, zs):
+        return self._calibrator(zs)
+
+
+class PlattBinnerCalibrator:
+    def __init__(self, num_calibration, num_bins):
+        self._num_calibration = num_calibration
+        self._num_bins = num_bins
+
+    def train_calibration(self, zs, ys):
+        self._platt = utils.get_platt_scaler(zs, ys)
+        platt_probs = self._platt(zs)
+        bins = utils.get_equal_bins(platt_probs, num_bins=self._num_bins)
+        self._discrete_calibrator = utils.get_discrete_calibrator(platt_probs, bins)
+
+    def calibrate(self, zs):
+        platt_probs = self._platt(zs)
+        return self._discrete_calibrator(platt_probs)
+
+
+class PlattCalibrator:
+    def __init__(self, num_calibration, num_bins):
+        self._num_calibration = num_calibration
+        self._num_bins = num_bins
+
+    def train_calibration(self, zs, ys):
+        self._platt = utils.get_platt_scaler(zs, ys)
+
+    def calibrate(self, zs):
+        return self._platt(zs)
+
+
 class HistogramTopCalibrator:
 
     def __init__(self, num_calibration, num_bins):
