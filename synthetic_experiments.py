@@ -76,7 +76,7 @@ def get_errors(function, Calibrators, dist, nb_args, num_trials, num_evaluation)
 
 def sweep_n_platt(a, b, save_file):
 	f = platt_function(a, b)
-	Calibrators = [calibrators.HistogramCalibrator, calibrators.PlattBinnerCalibrator]
+	Calibrators = [calibrators.PlattBinnerCalibrator]
 	dist = np.random.uniform
 	nb_args = [(500 * i, 10) for i in range(1, 9)]
 	num_trials = 1000
@@ -97,13 +97,13 @@ def sweep_b_platt(a, b, save_file):
 
 
 def sweep_n_noisy_platt(a, b, save_file):
-	l, u = 0.25, 0.75
-	f = noisy_platt_function(a, b, eps=0.02, l=l, u=u)
+	l, u = 0.0, 1.0
+	f = platt_function(a, b)
 	Calibrators = [calibrators.HistogramCalibrator, calibrators.PlattBinnerCalibrator, calibrators.PlattCalibrator]
 	def dist(size):
 		return np.random.uniform(low=l, high=u, size=size)
 	nb_args = [(500 * i, 10) for i in range(1, 9)]
-	num_trials = 1000
+	num_trials = 100
 	num_evaluation = 10000
 	means, stddevs = get_errors(f, Calibrators, dist, nb_args, num_trials, num_evaluation)
 	print(means)
@@ -202,5 +202,5 @@ if __name__ == "__main__":
 	# 	         platt_save_file='./saved_files/platt_vary_b_a2_b1')
 
 	f = noisy_platt_function(2, 1, eps=0.02, l=0.25, u=0.75)
-	plot_curve(f, './saved_files/noise_curve_vary_n_a2_b1', l=0.25, u=0.75)
-	sweep_n_noisy_platt(2, 1, './saved_files/noise_vary_n_a2_b1')
+	plot_curve(f, './saved_files/alt_noise_curve_vary_n_a2_b1', l=0.25, u=0.75)
+	sweep_n_noisy_platt(2, 1, './saved_files/alt_noise_vary_n_a2_b1')
